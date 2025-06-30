@@ -105,13 +105,6 @@ Tuple(index::Block) = Block.(index.n)
 
 # Some views may be computed eagerly without the SubArray wrapper
 @propagate_inbounds view(r::AbstractRange, B::Block{1}) = r[to_indices(r, (B,))...]
-@propagate_inbounds function view(C::CartesianIndices{N}, b1::Block{1}, B::Block{1}...) where {N}
-    blk = Block((b1, B...))
-    view(C, to_indices(C, (blk,))...)
-end
-@propagate_inbounds function view(C::CartesianIndices{N}, B::Block{N}) where {N}
-    view(C, to_indices(C, (B,))...)
-end
 
 """
     BlockIndex{N}
@@ -421,3 +414,47 @@ BlockSlice{BlockRange{1,Tuple{BT}},T,RT}(a::Base.OneTo) where {BT<:AbstractUnitR
     BlockSlice(BlockRange(convert(BT, Base.OneTo(1))), convert(RT, a))::BlockSlice{BlockRange{1,Tuple{BT}},T,RT}
 BlockSlice{BlockIndexRange{1,Tuple{BT},I,BI},T,RT}(a::Base.OneTo) where {BT<:AbstractUnitRange,T,RT<:AbstractUnitRange,I,BI} =
     BlockSlice(BlockIndexRange(Block(BI(1)), convert(BT, Base.OneTo(1))), convert(RT, a))::BlockSlice{BlockIndexRange{1,Tuple{BT},I,BI},T,RT}
+
+# Conserve CartesianIndices when slicing
+
+@propagate_inbounds function getindex(C::CartesianIndices, b1::Union{Block{1},BlockIndexRange{1},BlockRange{1}}, B::Union{Block{1},BlockIndexRange{1},BlockRange{1},Colon}...)
+    getindex(C, to_indices(C, (b1, B...))...)
+end
+@propagate_inbounds function view(C::CartesianIndices, b1::Union{Block{1},BlockIndexRange{1},BlockRange{1}}, B::Union{Block{1},BlockIndexRange{1},BlockRange{1},Colon}...)
+    getindex(C, b1, B...)
+end
+# Fix ambiguity error.
+@propagate_inbounds function getindex(C::CartesianIndices, b1::Block{1}, B::Union{Block{1},BlockIndexRange{1},BlockRange{1},Colon}...)
+    getindex(C, to_indices(C, (b1, B...))...)
+end
+# Fix ambiguity error.
+@propagate_inbounds function getindex(C::CartesianIndices{2}, b1::Block{1}, b2::Colon)
+    getindex(C, to_indices(C, (b1, b2))...)
+end
+# Fix ambiguity error.
+@propagate_inbounds function getindex(C::CartesianIndices{2}, b1::Colon, b2::Block{1})
+    getindex(C, to_indices(C, (b1, b2))...)
+end
+# Fix ambiguity error.
+@propagate_inbounds function getindex(C::CartesianIndices{2}, b1::BlockRange{1}, b2::BlockRange{1})
+    getindex(C, to_indices(C, (b1, b2))...)
+end
+
+@propagate_inbounds function getindex(C::CartesianIndices{N}, B::Block{N}) where {N}
+    getindex(C, to_indices(C, (B,))...)
+end
+@propagate_inbounds function view(C::CartesianIndices{N}, B::Block{N}) where {N}
+    getindex(C, B)
+end
+@propagate_inbounds function getindex(C::CartesianIndices{N}, B::BlockRange{N}) where {N}
+    getindex(C, to_indices(C, (B,))...)
+end
+@propagate_inbounds function view(C::CartesianIndices{N}, B::BlockRange{N}) where {N}
+    getindex(C, B)
+end
+@propagate_inbounds function getindex(C::CartesianIndices{N}, B::BlockIndexRange{N}) where {N}
+    getindex(C, to_indices(C, (B,))...)
+end
+@propagate_inbounds function view(C::CartesianIndices{N}, B::BlockIndexRange{N}) where {N}
+    getindex(C, B)
+end
