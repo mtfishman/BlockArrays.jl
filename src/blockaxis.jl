@@ -11,8 +11,9 @@
 @propagate_inbounds getindex(b::LayoutArray{T,N}, K::BlockIndexRange{N}) where {T,N} = b[block(K)][K.indices...]
 @propagate_inbounds getindex(b::LayoutArray{T,1}, K::BlockIndexRange{1}) where {T} = b[block(K)][K.indices...]
 
-function findblockindex(b::AbstractVector, k::Integer)
+function findblockindex(b::AbstractUnitRange{<:Integer}, k::Integer)
     @boundscheck k in b || throw(BoundsError())
+    Base.require_one_based_indexing(b)
     bl = blocklasts(b)
     blockidx = _searchsortedfirst(bl, k)
     @assert blockindex != lastindex(bl) + 1 # guaranteed by the @boundscheck above
@@ -418,6 +419,7 @@ end
 _searchsortedfirst(a::Tuple{}, k) = 1
 
 function findblock(b::AbstractBlockedUnitRange, k::Integer)
+    Base.require_one_based_indexing(b)
     @boundscheck k in b || throw(BoundsError(b,k))
     Block(_searchsortedfirst(blocklasts(b), k))
 end
@@ -480,7 +482,10 @@ julia> blockfirsts(b)
  4
 ```
 """
-blockfirsts(a::AbstractUnitRange{<:Integer}) = Ones{eltype(a)}(1)
+function blockfirsts(a::AbstractUnitRange{<:Integer})
+    Base.require_one_based_indexing(a)
+    Ones{eltype(a)}(1)
+end
 """
     blocklasts(a::AbstractUnitRange{<:Integer})
 
@@ -506,7 +511,10 @@ julia> blocklasts(b)
  6
 ```
 """
-blocklasts(a::AbstractUnitRange{<:Integer}) = Fill(eltype(a)(length(a)),1)
+function blocklasts(a::AbstractUnitRange{<:Integer})
+    Base.require_one_based_indexing(a)
+    Fill(eltype(a)(length(a)),1)
+end
 """
     blocklengths(a::AbstractUnitRange{<:Integer})
 

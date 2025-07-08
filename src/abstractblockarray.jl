@@ -185,6 +185,54 @@ false
 """
 @inline blockcheckindex(::Type{Bool}, inds::BlockRange{1}, i) = checkindex(Bool, Int.(inds), i)
 
+"""
+    to_blockindex(A::AbstractVector, I::Integer)
+
+Returns the [`BlockIndex`](@ref) of `A[I]`.
+"""
+function to_blockindex(A::AbstractVector, I::Integer)
+    return findblockindex(Base.axes1(A), I)
+end
+function to_blockindex(A::AbstractVector, I::AbstractVector)
+    return map(Base.Fix1(to_blockindex, A), I)
+end
+function to_blockindex(A::AbstractVector, I::AbstractUnitRange{<:Integer})
+    # TODO: Implement as a mortar of `BlockIndexRange`.
+    # bi_start = to_blockindex(A, first(I))
+    # bi_stop = to_blockindex(A, last(I))
+    # b_range = block(bi_start):block(bi_stop)
+    return map(Base.Fix1(to_blockindex, A), I)
+end
+function to_blockindex(A::AbstractVector, I::CartesianIndex{1})
+    return to_blockindex(A, Tuple(I)...)
+end
+
+to_blockindices(A, I::Tuple) = (@inline; to_blockindices(A, axes(A), I))
+to_blockindices(A, inds, ::Tuple{}) = ()
+function to_blockindices(A, inds, I::Tuple{Any, Vararg})
+    J = to_indices(A, inds, I)
+    (@inline; (to_blockindex(inds[1], J[1]), to_blockindices(A, _maybetail(inds), tail(J))...))
+end
+
+"""
+    to_block(A::AbstractVector, I::Integer)
+
+Returns the [`Block`](@ref) of `A[I...]`.
+"""
+function to_block(A::AbstractVector, I::Integer)
+    return findblock(Base.axes1(A), I)
+end
+function to_block(A::AbstractVector, I::CartesianIndex{1})
+    return to_block(A, Int(I))
+end
+
+to_blocks(A, I::Tuple) = (@inline; to_blocks(A, axes(A), I))
+to_blocks(A, inds, ::Tuple{}) = ()
+function to_blocks(A, inds, I::Tuple{Any, Vararg})
+    J = to_indices(A, inds, I)
+    (@inline; (to_block(inds[1], J[1]), to_blocks(A, _maybetail(inds), tail(J))...))
+end
+
 @propagate_inbounds setindex!(block_arr::AbstractBlockArray{T,N}, v, block::Block{N}) where {T,N} =
     setindex!(block_arr, v, Block.(block.n)...)
 @propagate_inbounds function setindex!(block_arr::AbstractBlockArray{T,N}, v, block::Vararg{Block{1}, N}) where {T,N}
