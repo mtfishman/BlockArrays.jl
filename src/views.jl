@@ -147,7 +147,7 @@ block(A::BlockSlice) = block(A.block)
 block(A::Block) = A
 
 # unwind BLockSlice1 for AbstractBlockArray
-@inline view(block_arr::AbstractBlockArray{<:Any,N}, blocks::Vararg{BlockSlice1, N}) where N =
+@inline view(block_arr::AbstractArray{<:Any,N}, blocks::Vararg{BlockSlice1, N}) where N =
     view(block_arr, map(block,blocks)...)
 
 const BlockSlices = Union{Base.Slice,BlockSlice{<:BlockRange{1}},BlockedSlice}
@@ -157,11 +157,11 @@ _block_reindex(b::BlockSlice, i::Block{1}) = b.block[Int(i)]
 _block_reindex(b::BlockedSlice, i::Block{1}) = b.blocks[Int(i)]
 _block_reindex(b::Slice, i::Block{1}) = i
 
-@inline view(V::SubArray{<:Any,N,<:AbstractBlockArray,<:NTuple{N,BlockSlices}}, block::Block{N}) where N =
+@inline view(V::SubArray{<:Any,N,<:AbstractArray,<:NTuple{N,BlockSlices}}, block::Block{N}) where N =
     view(parent(V), _block_reindex.(parentindices(V), Block.(block.n))...)
-@inline view(V::SubArray{<:Any,N,<:AbstractBlockArray,<:NTuple{N,BlockSlices}}, block::Vararg{Block{1},N}) where N =
+@inline view(V::SubArray{<:Any,N,<:AbstractArray,<:NTuple{N,BlockSlices}}, block::Vararg{Block{1},N}) where N =
     view(parent(V), _block_reindex.(parentindices(V), block)...)
-@inline view(V::SubArray{<:Any,1,<:AbstractBlockArray,<:Tuple{BlockSlices}}, block::Block{1}) =
+@inline view(V::SubArray{<:Any,1,<:AbstractArray,<:Tuple{BlockSlices}}, block::Block{1}) =
     view(parent(V), _block_reindex(parentindices(V)[1], block))
 
 
